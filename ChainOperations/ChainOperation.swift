@@ -1,15 +1,11 @@
 //
-//  FailableOperation.swift
-//  ChainOperation
-//
 //  Created by Tino Heth on 10.03.16.
 //  Copyright © 2016 t-no. All rights reserved.
 //
 
-import UIKit
+import Foundation
 
-public class ChainOperation<Result>: NSOperation {
-	public var result: Result?
+public class ChainableOperation: NSOperation {
 	public var error: ErrorType?
 
 	public final var failed: Bool {
@@ -33,7 +29,32 @@ public class ChainOperation<Result>: NSOperation {
 		}
 		requirements.removeAll()
 	}
+}
 
+private class ResultBox<T> {
+	var content: T
+	init(content: T) {
+		self.content = content
+	}
+}
+
+public class ResultOperation<Result>: ChainableOperation {
+	private var resultBox: ResultBox<Result>?
+	public var result: Result? {
+		set(value) {
+			if let value = value {
+				resultBox = ResultBox(content: value)
+			} else {
+				resultBox = nil
+			}
+		}
+		get {
+			return resultBox?.content
+		}
+	}
+}
+
+public class ChainOperation<Result>: ResultOperation<Result> {
 	override public final func main() {
 		handleRequirements()
 		if !cancelled {
@@ -47,10 +68,10 @@ public class ChainOperation<Result>: NSOperation {
 }
 
 private enum StateName: String {
-	case finished, executing
+	case isFinished, isExecuting
 }
 
-public class ConcurrentChainOperation<Result>: ChainOperation<Result> {
+public class ConcurrentChainOperation<Result>: ResultOperation<Result> {
 
 	override public var concurrent: Bool {
 		return true
@@ -58,10 +79,10 @@ public class ConcurrentChainOperation<Result>: ChainOperation<Result> {
 
 	private var isFinished: Bool = false {
 		willSet {
-			self.willChangeValueForKey(StateName.finished.rawValue)
+			self.willChangeValueForKey(StateName.isFinished.rawValue)
 		}
 		didSet {
-			self.didChangeValueForKey(StateName.finished.rawValue)
+			self.didChangeValueForKey(StateName.isFinished.rawValue)
 		}
 	}
 	override public var finished: Bool {
@@ -70,10 +91,10 @@ public class ConcurrentChainOperation<Result>: ChainOperation<Result> {
 
 	private var isExecuting: Bool = false {
 		willSet {
-			self.willChangeValueForKey(StateName.executing.rawValue)
+			self.willChangeValueForKey(StateName.isExecuting.rawValue)
 		}
 		didSet {
-			self.didChangeValueForKey(StateName.executing.rawValue)
+			self.didChangeValueForKey(StateName.isExecuting.rawValue)
 		}
 	}
 	override public var executing: Bool {
@@ -90,8 +111,16 @@ public class ConcurrentChainOperation<Result>: ChainOperation<Result> {
 		}
 	}
 
+	public func execute() {
+		signalFinish()
+	}
+
 	public func signalFinish() {
 		self.isExecuting = false
 		self.isFinished = true
+	}
+
+	override init() {
+		super.init()
 	}
 }

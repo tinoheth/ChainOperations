@@ -1,7 +1,4 @@
 //
-//  Requirement.swift
-//  ChainOperation
-//
 //  Created by Tino Heth on 10.03.16.
 //  Copyright © 2016 t-no. All rights reserved.
 //
